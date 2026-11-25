@@ -1,33 +1,38 @@
 import logging
 
 from app.exceptions import ConflictError, NotFoundError, ValidationError
-from app.models import Item, ItemCreate
-from app.repository import ItemRepository
+from app.models import OrderResponse, OrderCreate, Order, Wallet
+from app.repository import OrderRepository
 
 logger = logging.getLogger(__name__)
 
 
-class ItemService:
+class OrderService:
     """Business rules live here: no HTTP and no storage details."""
 
-    def __init__(self, repository: ItemRepository) -> None:
+    def __init__(self, repository: OrderRepository) -> None:
         self._repo = repository
 
-    def create_item(self, request: ItemCreate) -> Item:
-        name = request.name.strip()
-        if not name:
-            raise ValidationError("name must not be blank")
-        if self._repo.find_by_name(name):
-            logger.warning("Rejected duplicate item name=%s", name)
-            raise ConflictError(f"Item with name '{name}' already exists")
+    def create_item(self, req: OrderCreate) -> OrderResponse:
+        if not self._repo.emp_exists(req.emp_id):
+            logger.warning("Item not found id=%s", req.emp_id)
+            raise NotFoundError(f"Item {req.emp_id} not found")
 
-        item = self._repo.save(name, request.quantity, request.price)
-        logger.info("Created item id=%s name=%s", item.id, item.name)
-        return item
+        total = 0
+        for item_id, qty in req.items:
+            price = self._repo.itemPrice(item_id)
+            total += price*qty
 
-    def get_item(self, item_id: int) -> Item:
-        item = self._repo.find_by_id(item_id)
-        if item is None:
-            logger.warning("Item not found id=%s", item_id)
-            raise NotFoundError(f"Item {item_id} not found")
-        return item
+        with self._lock:
+            if total > self._repo.getBalance(req.emp_id):
+                logger.warning("Order out of budget")
+                raise ValidationError("out of budget")
+
+            self._repo.setBalance(emp_id, balance)
+        
+
+    def get_balance(self, emp_id: int) -> int:
+        if not self._repo.emp_exists(emp_id):
+            logger.warning("Item not found id=%s", emp_id)
+            raise NotFoundError(f"Item {emp_id} not found")
+        return self._repo.getBalance(emp_id)

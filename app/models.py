@@ -1,21 +1,33 @@
 from pydantic import BaseModel, Field
+from enum import Enum
 
+class Status(str, Enum):
+    PLACED = "PLACED"
+    REJECTED = "REJECTED"
 
-# Request body: Pydantic parses and validates the JSON for us.
-class ItemCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=100)
-    quantity: int = Field(ge=0)
-    price: float = Field(gt=0)
+class Order(BaseModel):
+    itemId: str
+    qty: int
 
+#Request Body
+class OrderCreate(BaseModel):
+    emp_id: str
+    items: list[Order]
 
 # Response body / stored entity.
-class Item(BaseModel):
-    id: int
-    name: str
-    quantity: int
-    price: float
+class OrderResponse(BaseModel):
+    order_id: int
+    total: int
+    walletBalance: int
+    status: Status
 
+#GET RESPONSE STRUCTURE
+class Wallet(BaseModel):
+    emp_id: str
+    balance: int
 
 class ErrorResponse(BaseModel):
     error: str
     message: str
+
+

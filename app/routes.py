@@ -2,25 +2,25 @@ import logging
 
 from fastapi import APIRouter, status
 
-from app.models import Item, ItemCreate
-from app.repository import ItemRepository
-from app.service import ItemService
+from app.models import Wallet, OrderRequest, OrderResponse
+from app.repository import OrderRepository
+from app.service import OrderService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/items", tags=["items"])
+router = APIRouter(prefix="/api", tags=["items"])
 
 # Simple wiring: one shared in-memory repository for the app's lifetime.
-_service = ItemService(ItemRepository())
+_service = OrderService(OrderRepository())
 
 
-@router.post("", response_model=Item, status_code=status.HTTP_201_CREATED)
-def create_item(request: ItemCreate) -> Item:
+@router.post("/orders", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
+def create_item(request: OrderRequest) -> OrderResponse:
     logger.info("POST /api/items body=%s", request.model_dump())
     return _service.create_item(request)
 
 
-@router.get("/{item_id}", response_model=Item)
-def get_item(item_id: int) -> Item:
-    logger.info("GET /api/items/%s", item_id)
-    return _service.get_item(item_id)
+@router.get("/{emp_id}", response_model=Wallet)
+def get_item(emp_id: int) -> Wallet:
+    logger.info("GET /api/items/%s", emp_id)
+    return Wallet(emp_id, _service.get_balance(emp_id))

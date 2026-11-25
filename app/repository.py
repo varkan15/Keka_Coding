@@ -1,34 +1,41 @@
 import logging
 from threading import Lock
+from models import Order, OrderResponse
 
 from app.models import Item
 
 logger = logging.getLogger(__name__)
 
 
-class ItemRepository:
+class OrderRepository:
     """In-memory storage. Only this class knows how data is kept."""
 
     def __init__(self) -> None:
-        self._items: dict[int, Item] = {}
+        self._menu = { "itm-1": {"name": "Masala Dosa", "price": 60},
+                      "itm-2": {"name": "Filter Coffee", "price": 25},
+                      "itm-3": {"name": "Samosa", "price": 15}}
+         
+        self._orders = dict[int, OrderResponse] = {}
+        self._wallets = {"emp-101": 500, "emp-102" : 100}
         self._next_id = 1
         self._lock = Lock()
 
-    def save(self, name: str, quantity: int, price: float) -> Item:
+    def emp_exists(self, emp_id):
+        return emp_id in self._wallets
+
+    def itemPrice(self, item_id):
+        return self._menu[item_id]["price"]
+    
+    def save(self, total, walletBalance, status) -> OrderResponse:
         with self._lock:
-            item = Item(id=self._next_id, name=name, quantity=quantity, price=price)
-            self._items[item.id] = item
+            order_res = OrderResponse(self._next_id, total, walletBalance, status)
+            self._orders[self._next_id] = order_res
             self._next_id += 1
-        logger.debug("Saved item %s", item)
-        return item
+        logger.debug("Saved item %s", order_res)
+        return order_res
 
-    def find_by_id(self, item_id: int) -> Item | None:
-        return self._items.get(item_id)
+    def getBalance(self, emp_id):
+        return self._wallets[emp_id]
 
-    def find_by_name(self, name: str) -> Item | None:
-        return next(
-            (i for i in self._items.values() if i.name.lower() == name.lower()), None
-        )
-
-    def find_all(self) -> list[Item]:
-        return list(self._items.values())
+    def setBalance(self, emp_id, val):
+        self._wallets[emp_id] = val
